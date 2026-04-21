@@ -5,6 +5,7 @@ from sqlalchemy import DateTime, ForeignKey, Integer, String, LargeBinary
 class Base(DeclarativeBase):
     ...
 
+
 class User(Base):
     __tablename__ = "users"
 
@@ -32,6 +33,7 @@ class SessionModel(Base):
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
 
     created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(UTC))
+    expires_at: Mapped[datetime] = mapped_column(DateTime)
 
     user: Mapped["User"] = relationship(back_populates="sessions")
 
@@ -83,3 +85,5 @@ class MessageRead(Base):
 
     message: Mapped["Message"] = relationship(back_populates="reads")
     user: Mapped["User"] = relationship(back_populates="reads")
+
+
