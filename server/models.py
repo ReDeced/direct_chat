@@ -22,6 +22,17 @@ class User(Base):
     reads: Mapped[list["MessageRead"]] = relationship(back_populates="user")
 
 
+class SessionModel(Base):
+    __tablename__ = "sessions"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    token: Mapped[str] = mapped_column(String, unique=True)
+
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(UTC))
+
+
 class ChatMembership(Base):
     __tablename__ = "chat_memberships"
 
