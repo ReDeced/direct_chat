@@ -20,6 +20,7 @@ class User(Base):
     memberships: Mapped[list["ChatMembership"]] = relationship(back_populates="user")
     pending_messages: Mapped[list["Message"]] = relationship(back_populates="user")
     reads: Mapped[list["MessageRead"]] = relationship(back_populates="user")
+    sessions: Mapped[list["SessionModel"]] = relationship(back_populates="user")
 
 
 class SessionModel(Base):
@@ -31,6 +32,8 @@ class SessionModel(Base):
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
 
     created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(UTC))
+
+    user: Mapped["User"] = relationship(back_populates="sessions")
 
 
 class ChatMembership(Base):
