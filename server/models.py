@@ -28,7 +28,7 @@ class SessionModel(Base):
     __tablename__ = "sessions"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    token: Mapped[str] = mapped_column(String, unique=True)
+    hashed_token: Mapped[bytes] = mapped_column(LargeBinary, unique=True)
 
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
 
