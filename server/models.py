@@ -54,6 +54,8 @@ class Chat(Base):
     __tablename__ = "chats"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    
+    name: Mapped[str] = mapped_column(String)
 
     members: Mapped[list["ChatMembership"]] = relationship(back_populates="chat")
     pending_messages: Mapped[list["Message"]] = relationship(back_populates="chat")
