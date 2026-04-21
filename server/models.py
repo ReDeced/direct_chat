@@ -15,7 +15,7 @@ class User(Base):
     
     public_key: Mapped[bytes] = mapped_column(LargeBinary)
 
-    last_online: Mapped[bytes] = mapped_column(DateTime)
+    last_online: Mapped[datetime] = mapped_column(DateTime)
     
     memberships: Mapped[list["ChatMembership"]] = relationship(back_populates="user")
     pending_messages: Mapped[list["Message"]] = relationship(back_populates="user")
