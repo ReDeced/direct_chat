@@ -7,9 +7,11 @@ from argon2 import PasswordHasher
 from sqlalchemy import create_engine, event
 from sqlalchemy.orm import Session
 from flask import Flask, jsonify, request
+from flask_socketio import SocketIO
 
 ph = PasswordHasher()
 app = Flask(__name__)
+socketio = SocketIO(app, cors_allowed_origins="*")
 engine = create_engine("sqlite:///db.sqlite")
 
 
@@ -155,3 +157,6 @@ def create_chat():
         return jsonify({"status": "ok", "chat_id": chat.id})
 
 
+if __name__ == "__main__":
+    socketio.run(app, host="0.0.0.0", port=5000)
+    
