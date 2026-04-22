@@ -1,3 +1,5 @@
+from datetime import UTC, datetime, timedelta
+import hmac
 import secrets
 import models
 import hashlib
@@ -40,16 +42,16 @@ def register():
     password_hash = ph.hash(password)
 
     with Session(engine) as session:
-        if session.query(models.User).filter(models.User.username == username).count() == 0:
-            user = models.User(username=username, password_hash=password_hash, public_key=public_key)
-
+        user = models.User(username=username, password_hash=password_hash, public_key=public_key)
+        
+        try:
             session.add(user)
             session.commit()
-
-            return jsonify({"status": "ok"})
-
-        else:
+        
+        except:
             return jsonify({"status": "error", "error": "User with this username already exists"})
+
+        return jsonify({"status": "ok"})
 
 
 @app.route("/api/login", methods=["POST"])
@@ -77,7 +79,12 @@ def login():
 
         token = secrets.token_hex(32)
         
-        session = models.SessionModel(token=token, user_id=user.id)
+        hashed_token = hashlib.sha256(token.encode()).digest()
+
+        session_obj = models.SessionModel(hashed_token=hashed_token, user_id=user.id, expires_at=datetime.now(UTC) + timedelta(hours=12))
+
+        session.add(session_obj)
+        session.commit()
 
         return jsonify({
             "status": "ok",
@@ -85,8 +92,67 @@ def login():
         })
 
 
+def verify_token(token, stored_hash):
+    token_hash = hashlib.sha256(token.encode()).digest()
+    return hmac.compare_digest(token_hash, stored_hash)
+
+
 def get_user_from_token(token):
+    token_hash = hashlib.sha256(token.encode()).digest()
+
     with Session(engine) as session:
-        s = session.query(models.SessionModel).filter_by(token=token).first()
-        return s.user if s else None
+        s = session.query(models.SessionModel).filter_by(hashed_token=token_hash).first()
+
+        if not s:
+            return None
+
+        if s.expires_at < datetime.now(UTC):
+            session.delete(s)
+            session.commit()
+            return None
+
+        return s.user
+
+
+@app.route("/api/create_chat", methods=["POST"])
+def create_chat():
+    data = request.json
+    if not data:
+        return jsonify({"status": "error", "error": "No JSON"})
+
+    token = data.get("token")
+    chat_name = data.get("chat_name")
+    users = data.get("users")
+    group_key = data.get("group_key")
+   
+    if not token or chat_name or users or group_key:
+        return jsonify({"status": "error", "error": "Invalid input"})
+    
+    user = get_user_from_token(token)
+
+    if not user:
+        return jsonify({"status": "error", "error": "Invalid session"})
+
+    with Session(engine) as session:
+        db_users = session.query(models.User).filter(models.User.username.in_(users)).all()
+
+        if len(db_users) != len(users):
+            return jsonify({"status": "error", "error": "Some users not found"})
+
+        chat = models.Chat()
+        session.add(chat)
+        session.flush()
+
+        session.add(models.ChatMembership(user_id=user.id, chat_id=chat.id))
+
+        for u in db_users:
+            if u.id == user.id:
+                continue
+
+            session.add(models.ChatMembership(user_id=u.id, chat_id=chat.id))
+
+        session.commit()
+
+        return jsonify({"status": "ok", "chat_id": chat.id})
+
 
