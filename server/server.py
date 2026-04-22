@@ -7,7 +7,6 @@ from argon2 import PasswordHasher
 from sqlalchemy import create_engine, event
 from sqlalchemy.orm import Session
 from flask import Flask, jsonify, request
-from nacl.public import PrivateKey, Box
 
 ph = PasswordHasher()
 app = Flask(__name__)
