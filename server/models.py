@@ -12,11 +12,11 @@ class User(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     username: Mapped[str] = mapped_column(String, unique=True)
 
-    password_hash: Mapped[bytes] = mapped_column(LargeBinary)
+    password_hash: Mapped[str] = mapped_column(String)
     
     public_key: Mapped[bytes] = mapped_column(LargeBinary)
 
-    last_online: Mapped[datetime] = mapped_column(DateTime)
+    last_online: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(UTC))
     
     memberships: Mapped[list["ChatMembership"]] = relationship(back_populates="user")
     pending_messages: Mapped[list["Message"]] = relationship(back_populates="user")
@@ -78,7 +78,7 @@ class Message(Base):
 
 
 class MessageRead(Base):
-    __tablename__ = "messages_read"
+    __tablename__ = "message_reads"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
 
