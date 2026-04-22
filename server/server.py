@@ -131,7 +131,7 @@ def get_user():
     user = get_user_from_token(token)
 
     if not user:
-        return jsonify("status": "error", "error": "Invalid session")
+        return jsonify({"status": "error", "error": "Invalid session"})
 
     with Session(engine) as session:
         db_user = session.query(models.User).filter(models.User.username == username).first()
