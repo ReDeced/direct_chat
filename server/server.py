@@ -1,3 +1,4 @@
+import base64
 from datetime import UTC, datetime, timedelta
 import hmac
 import secrets
@@ -115,6 +116,40 @@ def get_user_from_token(token):
         return s.user
 
 
+@app.route("/api/get_user", methods=["GET"])
+def get_user():
+    data = request.json
+    if not data:
+        return jsonify({"status": "error", "error": "No JSON"})
+
+    token = data.get("token")
+    username = data.get("username")
+
+    if not token or not username:
+        return jsonify({"status": "error", "error": "Invalid input"})
+
+    user = get_user_from_token(token)
+
+    if not user:
+        return jsonify("status": "error", "error": "Invalid session")
+
+    with Session(engine) as session:
+        db_user = session.query(models.User).filter(models.User.username == username).first()
+
+        if not db_user:
+            return jsonify({"status": "error", "error": "User not found"})
+
+        return {
+            "status": "ok",
+            "user": {
+                "id": db_user.id,
+                "username": db_user.username,
+                "last_online": db_user.last_online,
+                "public_key": base64.b64encode(db_user.public_key)
+            }
+        }
+
+
 @app.route("/api/create_chat", methods=["POST"])
 def create_chat():
     data = request.json
@@ -126,7 +161,7 @@ def create_chat():
     users = data.get("users")
     group_key = data.get("group_key")
    
-    if not token or chat_name or users or group_key:
+    if not token or not chat_name or not users or not group_key:
         return jsonify({"status": "error", "error": "Invalid input"})
     
     user = get_user_from_token(token)
