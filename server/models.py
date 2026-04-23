@@ -1,4 +1,4 @@
-from datetime import UTC, datetime
+from datetime import datetime
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 from sqlalchemy import DateTime, ForeignKey, Integer, String, LargeBinary
 
@@ -16,7 +16,7 @@ class User(Base):
     
     public_key: Mapped[bytes] = mapped_column(LargeBinary)
 
-    last_online: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(UTC))
+    last_online: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     
     memberships: Mapped[list["ChatMembership"]] = relationship(back_populates="user")
     pending_messages: Mapped[list["Message"]] = relationship(back_populates="user")
@@ -32,7 +32,7 @@ class SessionModel(Base):
 
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
 
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(UTC))
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     expires_at: Mapped[datetime] = mapped_column(DateTime)
 
     user: Mapped["User"] = relationship(back_populates="sessions")
@@ -70,7 +70,7 @@ class Message(Base):
     chat_id: Mapped[int] = mapped_column(ForeignKey("chats.id", ondelete="CASCADE"))
     
     content: Mapped[bytes] = mapped_column(LargeBinary)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(UTC))
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     user: Mapped["User"] = relationship(back_populates="pending_messages")
     chat: Mapped["Chat"] = relationship(back_populates="pending_messages")
