@@ -1,6 +1,7 @@
 import base64
 from datetime import UTC, datetime, timedelta
 import hmac
+import re
 import secrets
 import models
 import hashlib
@@ -15,6 +16,8 @@ app = Flask(__name__)
 socketio = SocketIO(app, cors_allowed_origins="*")
 engine = create_engine("sqlite:///db.sqlite")
 
+USERNAME_REGEX = re.compile(r"^[a-zA-Z0-9_.]{3,32}$")
+
 
 @event.listens_for(engine, "connect")
 def enable_foreign_keys(dbapi_connection, _):
@@ -24,7 +27,7 @@ def enable_foreign_keys(dbapi_connection, _):
 
 
 @app.route("/api")
-def api():
+def check():
     return jsonify({"status": "ok"})
 
 
@@ -36,11 +39,22 @@ def register():
     
     username = data.get("username")
     password = data.get("password")
-    public_key = data.get("public_key")
+    public_key_b64 = data.get("public_key")
 
-    if not username or not password or not public_key:
+    if not username or not password or not public_key_b64:
         return jsonify({"status": "error", "error": "Invalid input"})
-   
+    
+    if len(username) > 50 or not USERNAME_REGEX.fullmatch(username):
+        return jsonify({"status": "error", "error": "Invalid username"})
+
+    try:
+        public_key = base64.b64decode(public_key_b64)
+        if len(public_key) != 32:
+            raise ValueError()
+
+    except Exception:
+        return jsonify({"status": "error", "error": "Invalid public_key"})
+
     password_hash = ph.hash(password)
 
     with Session(engine) as session:
@@ -69,7 +83,7 @@ def login():
         return jsonify({"status": "error", "error": "Invalid input"})
     
     with Session(engine) as session:
-        user = session.query(models.User).filter_by(username=username).first()
+        user = session.query(models.User).filter(models.User.username==username).first()
 
         if not user:
             return jsonify({"status": "error", "error": "Invalid credentials"})
@@ -83,7 +97,7 @@ def login():
         
         hashed_token = hashlib.sha256(token.encode()).digest()
 
-        session_obj = models.SessionModel(hashed_token=hashed_token, user_id=user.id, expires_at=datetime.now(UTC) + timedelta(hours=12))
+        session_obj = models.SessionModel(hashed_token=hashed_token, user_id=user.id, expires_at=datetime.utcnow() + timedelta(hours=12))
 
         session.add(session_obj)
         session.commit()
@@ -108,7 +122,7 @@ def get_user_from_token(token):
         if not s:
             return None
 
-        if s.expires_at < datetime.now(UTC):
+        if s.expires_at < datetime.utcnow():
             session.delete(s)
             session.commit()
             return None
@@ -118,7 +132,7 @@ def get_user_from_token(token):
 
 @app.route("/api/get_user", methods=["GET"])
 def get_user():
-    data = request.json
+    data = request.args
     if not data:
         return jsonify({"status": "error", "error": "No JSON"})
 
@@ -144,8 +158,8 @@ def get_user():
             "user": {
                 "id": db_user.id,
                 "username": db_user.username,
-                "last_online": db_user.last_online,
-                "public_key": base64.b64encode(db_user.public_key)
+                "last_online": db_user.last_online.isoformat(),
+                "public_key": base64.b64encode(db_user.public_key).decode()
             }
         }
 
@@ -158,10 +172,11 @@ def create_chat():
 
     token = data.get("token")
     chat_name = data.get("chat_name")
-    users = data.get("users")
-    group_key = data.get("group_key")
-   
-    if not token or not chat_name or not users or not group_key:
+    keys = data.get("keys")
+
+    users = list(keys.keys())
+
+    if not token or not chat_name or not keys:
         return jsonify({"status": "error", "error": "Invalid input"})
     
     user = get_user_from_token(token)
@@ -193,5 +208,7 @@ def create_chat():
 
 
 if __name__ == "__main__":
-    socketio.run(app, host="0.0.0.0", port=5000)
+    models.Base.metadata.create_all(engine)
+
+    socketio.run(app, host="127.0.0.1", port=5000)
     

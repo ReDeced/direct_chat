@@ -1,4 +1,4 @@
-from datetime import UTC, datetime
+from datetime import datetime
 from sqlalchemy import DateTime, ForeignKey, Integer, LargeBinary, String
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
@@ -28,7 +28,7 @@ class User(Base):
     username: Mapped[str] = mapped_column(String)
     public_key: Mapped[bytes] = mapped_column(LargeBinary)
 
-    account: Mapped["Account"] | None = relationship(back_populates="user", uselist=False)
+    account: Mapped["Account | None"] = relationship(back_populates="user", uselist=False)
     memberships: Mapped[list["ChatMembership"]] = relationship(back_populates="user")
     messages: Mapped[list["Message"]] = relationship(back_populates="user")
     reads: Mapped[list["MessageRead"]] = relationship(back_populates="user")
@@ -36,6 +36,7 @@ class User(Base):
 
 class ChatKey(Base):
     __tablename__ = "chat_keys"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
 
     encrypted_group_key: Mapped[bytes] = mapped_column(LargeBinary)
 
@@ -53,7 +54,7 @@ class Chat(Base):
     
     memberships: Mapped[list["ChatMembership"]] = relationship(back_populates="chat")
     messages: Mapped[list["Message"]] = relationship(back_populates="chat")
-    chat_keys: Mapped["ChatKey"] = relationship(back_populates="account")
+    chat_keys: Mapped[list["ChatKey"]] = relationship(back_populates="chat")
 
 
 class ChatMembership(Base):
